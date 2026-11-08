@@ -118,8 +118,8 @@ fun LecturesScreen(vm: AppViewModel) {
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     byDay.forEach { (day, list) ->
-                        item(key = "h-$day") { DayHeader(day) }
-                        items(list, key = { "${it.Id}-${it.StartDate}" }) { LectureCard(it, onClick = { selected = it }) }
+                        item { DayHeader(day) }
+                        items(list) { LectureCard(it, onClick = { selected = it }) }
                     }
                 }
             }

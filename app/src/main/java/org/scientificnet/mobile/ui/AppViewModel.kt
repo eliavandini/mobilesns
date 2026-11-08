@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -218,9 +219,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _grades.update { it.copy(loading = true, error = null) }
             try {
-                val credits = async { api.creditPoints(studentId) }
-                val career = async { api.career(studentId) }
-                _grades.value = LoadState(data = Grades(credits.await(), career.await()))
+                val (credits, career) = loadBoth({ api.creditPoints(studentId) }, { api.career(studentId) })
+                _grades.value = LoadState(data = Grades(credits, career))
             } catch (e: Exception) {
                 handleError(e)?.let { msg -> _grades.update { it.copy(loading = false, error = msg) } }
             }
@@ -255,4 +255,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun consumeMessage() {
         _message.value = null
     }
+}
+
+/**
+ * Runs two requests in parallel. The `coroutineScope` makes a failure surface as an exception
+ * from this call (catchable by the caller) instead of escaping to the uncaught-exception handler,
+ * which crashed the app when a token had expired.
+ */
+suspend fun <A, B> loadBoth(first: suspend () -> A, second: suspend () -> B): Pair<A, B> = coroutineScope {
+    val a = async { first() }
+    val b = async { second() }
+    a.await() to b.await()
 }

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +50,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.scientificnet.mobile.auth.LoginBrowser
 import org.scientificnet.mobile.data.Account
+import org.scientificnet.mobile.crash.CrashActivity
+import org.scientificnet.mobile.crash.CrashReporter
+import android.content.Intent
 
 enum class Tab(val label: String, val icon: ImageVector) {
     LECTURES("Lectures", Icons.Default.DateRange),
@@ -119,6 +124,7 @@ private fun MainScreen(vm: AppViewModel, account: Account) {
     val snackbar = remember { SnackbarHostState() }
     val message by vm.message.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val hasCrashReport = remember(menuOpen) { CrashReporter.lastReport(context) != null }
     val appVersion = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
     }
@@ -158,6 +164,24 @@ private fun MainScreen(vm: AppViewModel, account: Account) {
                                 )
                             }
                             HorizontalDivider()
+                            if (hasCrashReport) {
+                                DropdownMenuItem(
+                                    text = { Text("Last crash report") },
+                                    leadingIcon = { Icon(Icons.Default.Warning, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        context.startActivity(Intent(context, CrashActivity::class.java))
+                                    },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Test crash screen") },
+                                leadingIcon = { Icon(Icons.Default.Build, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    throw RuntimeException("Test crash triggered from the account menu")
+                                },
+                            )
                             DropdownMenuItem(
                                 text = { Text("Sign out") },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },

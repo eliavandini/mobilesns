@@ -94,7 +94,7 @@ fun ExamsScreen(vm: AppViewModel) {
                     )
                 }
             }
-            items(shown, key = { "a-${it.examSessionId}-${it.examId}" }) { exam ->
+            items(shown) { exam ->
                 ExamCard(
                     exam = exam,
                     busy = busy != null && busy == exam.examSessionId,
@@ -113,7 +113,7 @@ fun ExamsScreen(vm: AppViewModel) {
                     }
                 }
                 if (showInactive) {
-                    items(inactive, key = { "i-${it.examSessionId}-${it.examId}" }) { exam ->
+                    items(inactive) { exam ->
                         ExamCard(exam, busy = false, onEnrol = null, onUnenrol = null)
                     }
                 }

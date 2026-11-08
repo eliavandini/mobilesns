@@ -39,7 +39,7 @@ fun GradesScreen(vm: AppViewModel) {
         ) {
             item { SummaryCard(grades.credits) }
             grades.career.groups.filter { it.exams.isNotEmpty() }.forEach { group ->
-                item(key = "g-${group.id}") {
+                item {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.Bottom,
@@ -63,7 +63,7 @@ fun GradesScreen(vm: AppViewModel) {
                         .thenBy { it.degreeYear }
                         .thenBy { it.title },
                 )
-                items(sorted, key = { "e-${group.id}-${it.id}" }) { ExamRow(it) }
+                items(sorted) { ExamRow(it) }
             }
         }
     }
