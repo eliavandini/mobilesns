@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Mortarboard -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,32 L84,45 L54,58 L24,45 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,52 L38,64 C38,70 46,74 54,74 C62,74 70,70 70,64 L70,52 L54,59 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M79,47 L81,47 L81,64 L79,64 Z" />
+</vector>
