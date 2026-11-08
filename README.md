@@ -25,10 +25,17 @@ Tokens last about an hour. When one expires, the app silently reopens the websit
 background (your Microsoft session cookie is kept), captures fresh tokens, and only shows the
 browser if Microsoft actually needs you to sign in again.
 
+## Download
+
+**Latest APK:** <https://github.com/eliavandini/mobilesns/releases/latest/download/MySNS.apk>
+(you need to be signed in to GitHub, since the repository is private).
+All builds: [Releases](https://github.com/eliavandini/mobilesns/releases).
+
 ## Builds
 
 Every push to `main` or a `claude/**` branch runs `.github/workflows/release-apk.yml`, which runs
-the unit tests, builds a signed release APK and publishes it as a GitHub Release (`build-N`).
+the unit tests, builds a signed release APK and publishes it as the latest GitHub Release
+(`build-N`, version `0.1.N`) with a changelog of the commits since the previous build.
 APKs are signed with `keystore/sideload.jks` (committed on purpose so updates install over each
 other — keep this repository private).
 

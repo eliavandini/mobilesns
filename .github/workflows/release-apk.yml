@@ -8,11 +8,18 @@ on:
 permissions:
   contents: write
 
+# Never publish two releases at the same time.
+concurrency:
+  group: release-apk
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags, for the changelog
 
       - uses: actions/setup-java@v4
         with:
@@ -27,10 +34,31 @@ jobs:
       - name: Build release APK
         run: ./gradlew --no-daemon assembleRelease -PversionCode=${{ github.run_number }}
 
-      - name: Rename APK
+      - name: Prepare APKs
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk "dist/MySNS-0.1.${{ github.run_number }}.apk"
+          # Fixed name so .../releases/latest/download/MySNS.apk always points at the newest build.
+          cp app/build/outputs/apk/release/app-release.apk dist/MySNS.apk
+
+      - name: Write release notes
+        run: |
+          prev=$(git tag --list 'build-*' --sort=-v:refname | head -n1)
+          {
+            echo "Built from \`${GITHUB_REF_NAME}\` @ ${GITHUB_SHA::7}."
+            echo
+            echo "## Changes"
+            if [ -n "$prev" ]; then
+              git log --no-merges --pretty='- %s' "$prev"..HEAD
+            else
+              git log --no-merges --pretty='- %s' -20
+            fi
+            echo
+            echo "## Install"
+            echo "Download **MySNS.apk** below on your Android phone and open it."
+            echo "It installs over any previous version (same signing key), so your account stays signed in."
+          } > notes.md
+          cat notes.md
 
       - uses: actions/upload-artifact@v4
         with:
@@ -43,8 +71,9 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: MySNS 0.1.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          prerelease: ${{ github.ref != 'refs/heads/main' }}
-          body: |
-            Automated build from `${{ github.ref_name }}` @ ${{ github.sha }}.
-            Download the APK below and open it on your phone to install/update.
-          files: dist/*.apk
+          prerelease: false
+          make_latest: "true"
+          body_path: notes.md
+          files: |
+            dist/MySNS.apk
+            dist/MySNS-0.1.${{ github.run_number }}.apk

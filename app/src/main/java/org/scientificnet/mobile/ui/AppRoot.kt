@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -117,6 +118,10 @@ private fun MainScreen(vm: AppViewModel, account: Account) {
     var menuOpen by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val message by vm.message.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val appVersion = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
+    }
 
     LaunchedEffect(message) {
         message?.let {
@@ -146,6 +151,11 @@ private fun MainScreen(vm: AppViewModel, account: Account) {
                                 Text(account.displayName, style = MaterialTheme.typography.titleMedium)
                                 account.email?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                                 account.degree?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                                Text(
+                                    "App version $appVersion",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                             HorizontalDivider()
                             DropdownMenuItem(

@@ -12,6 +12,7 @@ import org.scientificnet.mobile.data.ExamsResponse
 import org.scientificnet.mobile.data.Jwt
 import org.scientificnet.mobile.data.TimetableEntry
 import org.scientificnet.mobile.data.UserData
+import org.scientificnet.mobile.data.links
 import java.util.Base64
 
 /** Synthetic fixtures mirroring the shapes of the real API responses. */
@@ -34,6 +35,24 @@ class ParsingTest {
                 "BookingStatus":{"StatusCode":1,"BookingStart":null},"AisDegrees":[]}]""",
         )
         assertEquals("Prof. A B", t.single().Staff!!.single().displayName)
+    }
+
+    @Test fun lectureLinks() {
+        val t = json.decodeFromString<List<TimetableEntry>>(
+            """[{"Id":1,"MoodleUrl":"https://ole.example/course/view.php?id=1","TeamsJoinCode":"abc123",
+                 "Staff":[{"Lastname":"B","TeamsUrl":"https://teams.microsoft.com/l/team/x","TeamsJoinCode":"abc123","MoodleUrl":"https://ole.example/course/view.php?id=1"},
+                          {"Lastname":"C","TeamsUrl":"https://teams.microsoft.com/l/team/y","TeamsJoinCode":"","MoodleUrl":"https://ole.example/course/view.php?id=2"}]},
+                {"Id":2,"MoodleUrl":" ","TeamsJoinCode":"","Staff":[{"Lastname":"D","TeamsUrl":null,"TeamsJoinCode":""}]},
+                {"Id":3,"TeamsJoinCode":"zzz","Staff":null}]""",
+        )
+        val a = t[0].links()
+        assertEquals(listOf("https://ole.example/course/view.php?id=1", "https://ole.example/course/view.php?id=2"), a.oleUrls)
+        assertEquals(2, a.teams.size)
+        assertEquals("abc123", a.teams[0].joinCode)
+        assertEquals("https://teams.microsoft.com/l/team/y", a.teams[1].url)
+        assertEquals(null, a.teams[1].joinCode)
+        assertTrue(t[1].links().isEmpty)
+        assertEquals("zzz", t[2].links().teams.single().joinCode)
     }
 
     @Test fun exams() {

@@ -51,11 +51,44 @@ data class Staff(
     val AcademicTitle: String? = null,
     val Firstname: String? = null,
     val Lastname: String? = null,
+    val TeamsUrl: String? = null,
+    val TeamsJoinCode: String? = null,
+    val MoodleUrl: String? = null,
 ) {
     val displayName: String
         get() = listOfNotNull(AcademicTitle, Firstname, Lastname)
             .filter { it.isNotBlank() }
             .joinToString(" ")
+}
+
+/** A Microsoft Teams team for a lecture: link to open it and/or the code to join it. */
+data class TeamsLink(val url: String?, val joinCode: String?, val owner: String?)
+
+data class LectureLinks(val oleUrls: List<String>, val teams: List<TeamsLink>) {
+    val isEmpty: Boolean get() = oleUrls.isEmpty() && teams.isEmpty()
+}
+
+/** Collects the OLE (Moodle) and Teams links of a lecture from the entry and its staff, without duplicates. */
+fun TimetableEntry.links(): LectureLinks {
+    fun String?.clean() = this?.trim()?.takeIf { it.isNotEmpty() }
+    val staff = Staff.orEmpty()
+
+    val ole = (listOf(MoodleUrl) + staff.map { it.MoodleUrl })
+        .mapNotNull { it.clean() }
+        .distinct()
+
+    val teams = mutableListOf<TeamsLink>()
+    for (s in staff) {
+        val url = s.TeamsUrl.clean()
+        val code = s.TeamsJoinCode.clean()
+        if (url == null && code == null) continue
+        if (teams.any { (url != null && it.url == url) || (code != null && it.joinCode == code) }) continue
+        teams += TeamsLink(url, code, s.displayName.clean())
+    }
+    TeamsJoinCode.clean()?.let { code ->
+        if (teams.none { it.joinCode == code }) teams += TeamsLink(null, code, null)
+    }
+    return LectureLinks(ole, teams)
 }
 
 // ---- api.scientificnet.org/exam-enrolment-evaluation/api/student/{id}/exams ----
