@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +59,7 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
     val account by vm.account.collectAsStateWithLifecycle()
     val authMode by vm.authMode.collectAsStateWithLifecycle()
     val accountError by vm.accountError.collectAsStateWithLifecycle()
+    val canRetryProfile by vm.canRetryProfile.collectAsStateWithLifecycle()
 
     when {
         authMode != null -> LoginBrowser(
@@ -65,13 +67,17 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
             onCaptured = vm::onCaptured,
             onCancel = vm::cancelAuth,
         )
-        account == null -> WelcomeScreen(error = accountError, onAddAccount = vm::startAddAccount)
+        account == null -> WelcomeScreen(
+            error = accountError,
+            onAddAccount = vm::startAddAccount,
+            onRetry = if (canRetryProfile) vm::retryProfile else null,
+        )
         else -> MainScreen(vm, account!!)
     }
 }
 
 @Composable
-private fun WelcomeScreen(error: String?, onAddAccount: () -> Unit) {
+private fun WelcomeScreen(error: String?, onAddAccount: () -> Unit, onRetry: (() -> Unit)?) {
     Scaffold { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(32.dp),
@@ -95,6 +101,10 @@ private fun WelcomeScreen(error: String?, onAddAccount: () -> Unit) {
             if (error != null) {
                 Spacer(Modifier.height(16.dp))
                 Text(error, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+            }
+            if (onRetry != null) {
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onRetry) { Text("Retry") }
             }
         }
     }

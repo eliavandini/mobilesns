@@ -92,7 +92,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Last login result, kept so loading the profile can be retried without signing in again. */
+    private var pendingCapture: CaptureResult? = null
+
+    private val _canRetryProfile = MutableStateFlow(false)
+    val canRetryProfile: StateFlow<Boolean> = _canRetryProfile.asStateFlow()
+
+    fun retryProfile() {
+        val capture = pendingCapture ?: return startAddAccount()
+        _accountError.value = null
+        _canRetryProfile.value = false
+        onCaptured(capture)
+    }
+
     fun onCaptured(result: CaptureResult) {
+        pendingCapture = result
         result.tokens.forEach { (aud, token) -> store.saveToken(aud, token) }
         viewModelScope.launch {
             try {
@@ -114,10 +128,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 if (_authMode.value == AuthMode.SILENT) lastSilentAuthAt = System.currentTimeMillis()
                 _authMode.value = null
+                pendingCapture = null
                 refreshAll()
             } catch (e: Exception) {
                 _authMode.value = null
                 _accountError.value = "Signed in, but loading your profile failed: ${e.message}"
+                _canRetryProfile.value = true
             }
         }
     }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  my.scientificnet.org's APIs (webservices.scientificnet.org, api.scientificnet.org) use certificates
+  issued by GEANT / HARICA. The "HARICA TLS RSA Root CA 2021" root is missing from the system trust
+  store on older Android versions, which makes plain HTTPS calls fail with
+  "Trust anchor for certification path not found". We trust the HARICA 2021 roots in addition to the
+  system roots, for scientificnet.org only.
+  SHA-256 (RSA): D9:5D:0E:8E:DA:79:52:5B:F9:BE:B1:1B:14:D2:10:0D:32:94:98:5F:0C:62:D9:FA:BD:9C:D9:99:EC:CB:7B:1D
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">scientificnet.org</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/harica_tls_rsa_root_ca_2021" />
+            <certificates src="@raw/harica_tls_ecc_root_ca_2021" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
