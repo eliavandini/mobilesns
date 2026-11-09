@@ -58,6 +58,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,7 +100,7 @@ data class CaptureResult(
 )
 
 /** A page that failed to load in the login browser. */
-data class PageError(val title: String, val detail: String, val url: String?)
+data class PageError(val title: String, val detail: String, val url: String?, val code: Int? = null)
 
 /** scheme://host/path only: query strings and fragments can carry auth codes. */
 internal fun sanitizeUrl(url: String?): String {
@@ -113,6 +119,15 @@ private fun sslErrorName(code: Int): String = when (code) {
     SslError.SSL_DATE_INVALID -> "certificate date invalid (check the phone's date and time)"
     else -> "invalid certificate"
 }
+
+/** WebView error codes that mean the network, not the page, is the problem. */
+private val NETWORK_ERROR_CODES = setOf(
+    WebViewClient.ERROR_CONNECT,
+    WebViewClient.ERROR_TIMEOUT,
+    WebViewClient.ERROR_HOST_LOOKUP,
+    WebViewClient.ERROR_IO,
+    WebViewClient.ERROR_PROXY_AUTHENTICATION,
+)
 
 /**
  * Opens non-web links (Authenticator, passkeys, app links) outside the WebView.
@@ -184,6 +199,9 @@ fun LoginBrowser(
     var generation by remember { mutableIntStateOf(0) }
     var rendererCrashes by remember { mutableIntStateOf(0) }
     val history = remember { ArrayDeque<String>() }
+    var connTest by remember { mutableStateOf<String?>(null) }
+    var connTesting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val onCapturedState by rememberUpdatedState(onCaptured)
 
     fun log(event: String) {
@@ -244,6 +262,7 @@ fun LoginBrowser(
         appendLine("App:     ${app ?: "?"}")
         appendLine("Recent navigation:")
         history.forEach { appendLine("  $it") }
+        connTest?.let { appendLine(); append(it) }
     }
 
     // If only the timetable/userdata token showed up, don't wait forever for the exam one.
@@ -382,6 +401,7 @@ fun LoginBrowser(
                                         title = "The page couldn't be loaded",
                                         detail = "$desc (code ${error.errorCode})",
                                         url = request.url.toString(),
+                                        code = error.errorCode,
                                     )
                                 }
 
@@ -470,19 +490,52 @@ fun LoginBrowser(
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     ),
                 ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(
+                        Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         Text(err.title, style = MaterialTheme.typography.titleMedium)
                         Text(err.detail, style = MaterialTheme.typography.bodyMedium)
                         Text(
                             sanitizeUrl(err.url),
                             style = MaterialTheme.typography.bodySmall,
                         )
+                        if (err.code in NETWORK_ERROR_CODES) {
+                            val host = runCatching { java.net.URI(err.url).host }.getOrNull() ?: "the server"
+                            Text(
+                                "Your network is blocking or cutting the connection to $host. " +
+                                    "Try switching between Wi-Fi and mobile data, and turn off any VPN, " +
+                                    "Private DNS or ad blocker, then tap Retry.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = ::retry) { Text("Retry") }
                             OutlinedButton(onClick = ::startOver) { Text("Start over") }
                         }
-                        TextButton(onClick = { clipboard.setText(AnnotatedString(errorDetails())) }) {
-                            Text("Copy details")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                enabled = !connTesting,
+                                onClick = {
+                                    connTesting = true
+                                    scope.launch {
+                                        connTest = runCatching { ConnectionTest.run(context) }
+                                            .getOrElse { "Connection test failed: ${it.message}" }
+                                        log("connection test done")
+                                        connTesting = false
+                                    }
+                                },
+                            ) { Text(if (connTesting) "Testing…" else "Test connection") }
+                            TextButton(onClick = { clipboard.setText(AnnotatedString(errorDetails())) }) {
+                                Text("Copy details")
+                            }
+                        }
+                        connTest?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                            )
                         }
                     }
                 }
